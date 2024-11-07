@@ -9,21 +9,21 @@ let error: Error | null = null;
 let region: string, key: string, secret: string, zone: string, name: string;
 
 try {
-  const region = Deno.env.get("AWS_REGION") as string;
+  region = Deno.env.get("AWS_REGION") as string;
   if (!region) throw new Error("Please provide an AWS_REGION env variable");
 
-  const key = Deno.env.get("AWS_ACCESS_KEY_ID") as string;
+  key = Deno.env.get("AWS_ACCESS_KEY_ID") as string;
   if (!key) throw new Error("Please provide an AWS_ACCESS_KEY_ID env variable");
 
-  const secret = Deno.env.get("AWS_SECRET_ACCESS_KEY") as string;
+  secret = Deno.env.get("AWS_SECRET_ACCESS_KEY") as string;
   if (!secret)
     throw new Error("Please provide an AWS_SECRET_ACCESS_KEY env variable");
 
-  const zone = Deno.env.get("AWS_HOSTED_ZONE_ID") as string;
+  zone = Deno.env.get("AWS_HOSTED_ZONE_ID") as string;
   if (!zone)
     throw new Error("Please provide an AWS_HOSTED_ZONE_ID env variable");
 
-  const name = Deno.env.get("AWS_NAME") as string;
+  name = Deno.env.get("AWS_NAME") as string;
   if (!name) throw new Error("Please provide an AWS_NAME env variable");
 } catch (e) {
   error = e as Error;
@@ -111,6 +111,7 @@ async function updateIP() {
       await updateRecord(currentIp);
 
       if (currentIp) writeIpToFile(currentIp);
+      log("Update completed");
     } catch (e) {
       log("Error updating IP: ");
       log(e);
