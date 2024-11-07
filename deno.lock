@@ -1,8 +1,14 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@std/cli@*": "1.0.6",
     "npm:@aws-sdk/client-route-53@*": "3.683.0_@aws-sdk+client-sts@3.682.0__@aws-sdk+client-sso-oidc@3.682.0___@aws-sdk+client-sts@3.682.0___@aws-sdk+client-sts@3.682.0_@aws-sdk+client-sso-oidc@3.682.0__@aws-sdk+client-sts@3.682.0___@aws-sdk+client-sso-oidc@3.682.0____@aws-sdk+client-sts@3.682.0____@aws-sdk+client-sts@3.682.0__@aws-sdk+client-sts@3.682.0___@aws-sdk+client-sso-oidc@3.682.0____@aws-sdk+client-sts@3.682.0_____@aws-sdk+client-sso-oidc@3.682.0___@aws-sdk+client-sso-oidc@3.682.0",
     "npm:@types/node@*": "22.5.4"
+  },
+  "jsr": {
+    "@std/cli@1.0.6": {
+      "integrity": "d22d8b38c66c666d7ad1f2a66c5b122da1704f985d3c47f01129f05abb6c5d3d"
+    }
   },
   "npm": {
     "@aws-crypto/sha256-browser@5.2.0": {

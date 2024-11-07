@@ -2,22 +2,32 @@ import {
   Route53Client,
   ChangeResourceRecordSetsCommand,
 } from "npm:@aws-sdk/client-route-53";
+import { parseArgs } from "jsr:@std/cli/parse-args";
+import packageInfo from "./deno.json" with { type: "json" };
 
-const region = Deno.env.get("AWS_REGION") as string;
-if (!region) throw new Error("Please provide AWS_REGION env variable");
+let error: Error | null = null;
+let region: string, key: string, secret: string, zone: string, name: string;
 
-const key = Deno.env.get("AWS_ACCESS_KEY_ID") as string;
-if (!region) throw new Error("Please provide AWS_ACCESS_KEY_ID env variable");
+try {
+  const region = Deno.env.get("AWS_REGION") as string;
+  if (!region) throw new Error("Please provide an AWS_REGION env variable");
 
-const secret = Deno.env.get("AWS_SECRET_ACCESS_KEY") as string;
-if (!region)
-  throw new Error("Please provide AWS_SECRET_ACCESS_KEY env variable");
+  const key = Deno.env.get("AWS_ACCESS_KEY_ID") as string;
+  if (!key) throw new Error("Please provide an AWS_ACCESS_KEY_ID env variable");
 
-const zone = Deno.env.get("AWS_HOSTED_ZONE_ID") as string;
-if (!region) throw new Error("Please provide AWS_HOSTED_ZONE_ID env variable");
+  const secret = Deno.env.get("AWS_SECRET_ACCESS_KEY") as string;
+  if (!secret)
+    throw new Error("Please provide an AWS_SECRET_ACCESS_KEY env variable");
 
-const name = Deno.env.get("AWS_NAME") as string;
-if (!region) throw new Error("Please provide AWS_NAME env variable");
+  const zone = Deno.env.get("AWS_HOSTED_ZONE_ID") as string;
+  if (!zone)
+    throw new Error("Please provide an AWS_HOSTED_ZONE_ID env variable");
+
+  const name = Deno.env.get("AWS_NAME") as string;
+  if (!name) throw new Error("Please provide an AWS_NAME env variable");
+} catch (e) {
+  error = e as Error;
+}
 
 const fileCacheName = "ip";
 
@@ -35,6 +45,14 @@ function getCurrentDateTime() {
   );
 }
 
+function sleep(seconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
+}
+
+function log(...messages: any[]) {
+  console.log(getCurrentDateTime() + " |", ...messages);
+}
+
 async function updateRecord(ip: string) {
   const client = new Route53Client({
     region: region,
@@ -49,14 +67,14 @@ async function updateRecord(ip: string) {
     ChangeBatch: {
       Changes: [
         {
-          Action: "UPSERT", // Use 'UPSERT' to create or update the record
+          Action: "UPSERT",
           ResourceRecordSet: {
-            Name: name, // Replace with the name of your domain
-            Type: "A", // Record type
-            TTL: 300, // Time to live
+            Name: name,
+            Type: "A",
+            TTL: 300,
             ResourceRecords: [
               {
-                Value: ip, // Replace with the new IP address or value
+                Value: ip,
               },
             ],
           },
@@ -64,7 +82,7 @@ async function updateRecord(ip: string) {
       ],
     },
   });
-  const response = await client.send(command);
+  await client.send(command);
 }
 
 async function getIpFromFile() {
@@ -78,25 +96,74 @@ async function getIpFromFile() {
 function writeIpToFile(ip: string) {
   Deno.writeTextFileSync(fileCacheName, ip);
 }
+async function updateIP() {
+  const cachedIp = await getIpFromFile();
 
-const cachedIp = await getIpFromFile();
+  const currentIp = await fetch("https://icanhazip.com").then((res) => {
+    return res.text();
+  });
 
-const currentIp = await fetch("https://icanhazip.com").then((res) => {
-  return res.text();
+  if (cachedIp !== currentIp) {
+    log("New IP: " + currentIp);
+    log("Updating Route 53");
+
+    try {
+      await updateRecord(currentIp);
+
+      if (currentIp) writeIpToFile(currentIp);
+    } catch (e) {
+      log("Error updating IP: ");
+      log(e);
+    }
+  } else {
+    log("Current IP Matches");
+  }
+}
+
+function writeHelp() {
+  console.log(`
+-----------------------------
+route53-update
+bbunks
+${packageInfo.version}
+-----------------------------
+
+
+REQUIRED ENV VARIABLES
+-----------------------------
+AWS_ACCESS_KEY_ID: IAM Credential Key
+AWS_SECRET_ACCESS_KEY: IAM Credential Secret Key
+AWS_REGION: Region of Route 53
+AWS_HOSTED_ZONE_ID: ID of the zone
+AWS_NAME: Name of the record you would like to update
+
+
+Args
+-----------------------------
+-r  --repeat  | sets an interval to check every 5 minutes
+-h  --help    | shows useful information to run
+`);
+}
+
+const flags = parseArgs(Deno.args, {
+  boolean: ["-r", "--repeat", "-h", "--help"],
 });
 
-if (cachedIp !== currentIp) {
-  console.log("New IP: " + currentIp);
-  console.log("Updating Route 53");
-
-  try {
-    await updateRecord(currentIp);
-
-    if (currentIp) writeIpToFile(currentIp);
-  } catch (e) {
-    console.log("Error updating IP: ");
-    console.log(e);
-  }
+if (flags["-h"] || flags["--help"] || flags["--help"]) {
+  writeHelp();
 } else {
-  console.log(getCurrentDateTime() + " | Current IP Matches");
+  log("Starting")
+  if (error) {
+    log(error);
+    writeHelp();
+  } else {
+    updateIP();
+
+    if (flags["-r"] || flags["r"] || flags["--repeat"]) {
+      while (true) {
+        await sleep(300);
+        updateIP();
+      }
+    }
+  }
 }
