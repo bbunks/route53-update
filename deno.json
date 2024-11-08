@@ -1,7 +1,7 @@
 {
   "tasks": {
     "update-dns": "deno run --allow-sys --allow-read --allow-write --allow-env --allow-net --env-file main.ts",
-    "build": "deno compile --allow-sys --allow-read --allow-write --allow-env --allow-net main.ts",
+    "build": "deno --allow-run --allow-read compile.ts",
     "docker": "docker build . -t route53-update:latest"
   },
   "imports": {

@@ -4,6 +4,7 @@ import {
 } from "npm:@aws-sdk/client-route-53";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import packageInfo from "./deno.json" with { type: "json" };
+import { getIpFromFile, log, sleep } from "./utils.ts";
 
 let error: Error | null = null;
 let region: string, key: string, secret: string, zone: string, name: string;
@@ -30,28 +31,6 @@ try {
 }
 
 const fileCacheName = "ip";
-
-function getCurrentDateTime() {
-  const now = new Date();
-  const format = (num: number) => String(num).padStart(2, "0");
-
-  return (
-    `${format(now.getMonth() + 1)}/${format(
-      now.getDate()
-    )}/${now.getFullYear()} ` +
-    `${format(now.getHours())}:${format(now.getMinutes())}:${format(
-      now.getSeconds()
-    )}`
-  );
-}
-
-function sleep(seconds: number) {
-  return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
-}
-
-function log(...messages: any[]) {
-  console.log(getCurrentDateTime() + " |", ...messages);
-}
 
 async function updateRecord(ip: string) {
   const client = new Route53Client({
@@ -85,19 +64,11 @@ async function updateRecord(ip: string) {
   await client.send(command);
 }
 
-async function getIpFromFile() {
-  try {
-    return await Deno.readTextFile(fileCacheName);
-  } catch {
-    return "";
-  }
-}
-
 function writeIpToFile(ip: string) {
   Deno.writeTextFileSync(fileCacheName, ip);
 }
 async function updateIP() {
-  const cachedIp = await getIpFromFile();
+  const cachedIp = await getIpFromFile(fileCacheName);
 
   const currentIp = await fetch("https://icanhazip.com").then((res) => {
     return res.text();
